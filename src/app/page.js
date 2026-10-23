@@ -84,16 +84,16 @@ function advanceBracket(matches, changedIdx, indoor) {
   }
 
   // Consolation
-  // C1 (M6): L(M2) vs L(M1)
+  // C1 (M6): L(M0) vs L(M1) — the two lower-seeded losers (seeds 4/5 and 3/6)
+  if (changedIdx === 0 && m[0].loser) {
+    m[6] = { ...m[6], p1: m[0].loser };
+  }
   if (changedIdx === 1 && m[1].loser) {
     m[6] = { ...m[6], p2: m[1].loser };
   }
+  // C2 (M7): W(C1) vs L(M2) — L(M2) is seed 2/7 loser, gets the consolation bye
   if (changedIdx === 2 && m[2].loser) {
-    m[6] = { ...m[6], p1: m[2].loser };
-  }
-  // C2 (M7): W(C1) vs L(M0)
-  if (changedIdx === 0 && m[0].loser) {
-    m[7] = { ...m[7], p2: m[0].loser };
+    m[7] = { ...m[7], p2: m[2].loser };
   }
   if (changedIdx === 6 && m[6].winner) {
     m[7] = { ...m[7], p1: m[6].winner };
@@ -122,9 +122,8 @@ function pointsForFlight(matches) {
     if (matches[i]?.winner) add(matches[i].winner, 1);
   }
 
-  // Consolation bye = 0.5 pt: L(M0) sits out C1 and goes straight to C2
-  // This is awarded as soon as M0 has a loser (i.e. M0 is played)
-  if (matches[0]?.loser) add(matches[0].loser, 0.5);
+  // Consolation bye = 0.5 pt: L(M2) is highest-seeded loser, sits out C1, goes straight to C2
+  if (matches[2]?.loser) add(matches[2].loser, 0.5);
 
   // Consolation wins = 0.5 pt each
   for (let i = 6; i <= 7; i++) {
