@@ -122,6 +122,10 @@ function pointsForFlight(matches) {
     if (matches[i]?.winner) add(matches[i].winner, 1);
   }
 
+  // Consolation bye = 0.5 pt: L(M0) sits out C1 and goes straight to C2
+  // This is awarded as soon as M0 has a loser (i.e. M0 is played)
+  if (matches[0]?.loser) add(matches[0].loser, 0.5);
+
   // Consolation wins = 0.5 pt each
   for (let i = 6; i <= 7; i++) {
     if (matches[i]?.winner) add(matches[i].winner, 0.5);
