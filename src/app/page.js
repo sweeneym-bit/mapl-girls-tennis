@@ -858,7 +858,10 @@ export default function App() {
   const handleAutoTest = () => {
     if (!window.confirm('Fill all flights with random test data including results?')) return;
     const firstNames = ['Alice','Beth','Cara','Dana','Emma','Faye','Gina','Hana','Iris','Jana','Kara','Lena','Mia','Nina','Opal','Pam','Quinn','Rosa','Sara','Tara','Uma','Vera','Wren','Xena','Yara','Zoe'];
-    const pickScore = () => `${Math.floor(Math.random()*4)+5}-${Math.floor(Math.random()*3)}`;
+    const pickProset = () => `8-${Math.floor(Math.random()*6)}`;
+    const pickSet = () => { const w = Math.random() > 0.3 ? 6 : 7; const l = w === 6 ? [0,1,2,3,4][Math.floor(Math.random()*5)] : [5,6][Math.floor(Math.random()*2)]; return `${w}-${l}`; };
+    const pickBo3 = () => { const s1 = pickSet(); const s2 = pickSet(); if (coin()) return `${s1}, ${s2}`; const s3 = Math.random()>0.5 ? `10-${Math.floor(Math.random()*8)}` : pickSet(); return `${s1}, ${s2}, ${s3}`; };
+    const pickScore = (format) => format === 'bo3' ? pickBo3() : pickProset();
     let namePool = [...firstNames].sort(() => Math.random() - 0.5);
     let nameIdx = 0;
     const nextName = () => firstNames[(nameIdx++) % firstNames.length] + (nameIdx > firstNames.length ? '2' : '');
@@ -881,7 +884,7 @@ export default function App() {
         const p2 = i === 0 ? p[4] : i === 1 ? p[5] : p[6];
         const w = coin() ? p1 : p2;
         const l = w === p1 ? p2 : p1;
-        return { p1, p2, winner: w, loser: l, score: pickScore(), format: 'proset' };
+        return { p1, p2, winner: w, loser: l, score: pickScore('proset'), format: 'proset' };
       });
 
       // SF
@@ -889,17 +892,17 @@ export default function App() {
       const sf1 = { p1: { ...p[0], seed: 1, bye: true }, p2: sf1p2, winner: null, loser: null, score: null, format: 'bo3' };
       const sf1w = coin() ? sf1.p1 : sf1.p2;
       const sf1l = sf1w === sf1.p1 ? sf1.p2 : sf1.p1;
-      sf1.winner = sf1w; sf1.loser = sf1l; sf1.score = pickScore();
+      sf1.winner = sf1w; sf1.loser = sf1l; sf1.score = pickScore('bo3');
 
       const sf2 = { p1: r[1].winner, p2: r[2].winner, winner: null, loser: null, score: null, format: 'bo3' };
       const sf2w = coin() ? sf2.p1 : sf2.p2;
       const sf2l = sf2w === sf2.p1 ? sf2.p2 : sf2.p1;
-      sf2.winner = sf2w; sf2.loser = sf2l; sf2.score = pickScore();
+      sf2.winner = sf2w; sf2.loser = sf2l; sf2.score = pickScore('bo3');
 
       // Final
       const fin = { p1: sf1w, p2: sf2w, winner: null, loser: null, score: null, format: 'bo3' };
       const finw = coin() ? fin.p1 : fin.p2;
-      fin.winner = finw; fin.loser = finw === fin.p1 ? fin.p2 : fin.p1; fin.score = pickScore();
+      fin.winner = finw; fin.loser = finw === fin.p1 ? fin.p2 : fin.p1; fin.score = pickScore('bo3');
 
       // Consolation: find highest-seeded loser (lowest seed number) among R1 losers
       const r1losers = [r[0].loser, r[1].loser, r[2].loser].sort((a, b) => a.seed - b.seed);
@@ -908,11 +911,11 @@ export default function App() {
       const c1p2 = r1losers[2];
       const c1w = coin() ? c1p1 : c1p2;
       const c1l = c1w === c1p1 ? c1p2 : c1p1;
-      const c1 = { p1: c1p1, p2: c1p2, winner: c1w, loser: c1l, score: pickScore(), format: 'proset' };
+      const c1 = { p1: c1p1, p2: c1p2, winner: c1w, loser: c1l, score: pickScore('proset'), format: 'proset' };
 
       const c2 = { p1: c1w, p2: byePlayer, winner: null, loser: null, score: null, format: 'proset' };
       const c2w = coin() ? c2.p1 : c2.p2;
-      c2.winner = c2w; c2.loser = c2w === c2.p1 ? c2.p2 : c2.p1; c2.score = pickScore();
+      c2.winner = c2w; c2.loser = c2w === c2.p1 ? c2.p2 : c2.p1; c2.score = pickScore('proset');
 
       const matches = [r[0], r[1], r[2], sf1, sf2, fin, c1, c2];
       const seedList = players.map(pl => IS_DOUBLES[fi]
