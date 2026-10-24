@@ -18,11 +18,11 @@ const MATCH_OFFSET = [0, 8, 16, 24, 32];
 
 // Outdoor court assignments per flight
 const OUTDOOR_COURTS = [
-  ['Ct1E', 'Ct2E', 'Ct3E'],       // Singles #1
-  ['Ct1W', 'Ct2W', 'Ct3W'],       // Singles #2
-  ['Ct4E', 'Ct5E', 'Ct6E'],       // Singles #3
-  ['Center Ct E', 'Center Ct W'], // Doubles #1
-  ['Ct5W', 'Ct6W'],               // Doubles #2
+  ['Ct1E', 'Ct2E', 'Ct3E'],              // Singles #1
+  ['Ct1W', 'Ct2W', 'Ct3W'],             // Singles #2
+  ['Ct4E', 'Ct5E', 'Ct6E'],             // Singles #3
+  ['Center Ct E', 'Center Ct W'],        // Doubles #1 (only 2 courts)
+  ['Ct4W', 'Ct5W', 'Ct6W'],             // Doubles #2
 ];
 
 // Round times outdoor
@@ -612,7 +612,7 @@ function OOPTab({ flights, generated, indoor }) {
                   {fMatches.map(({ mNum, match }, idx) => (
                     <div key={mNum} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'white', border: '1px solid #e8e0d8', borderRadius: 8, padding: '9px 13px', marginBottom: 5 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#888', width: 30 }}>{mNum}</div>
-                      {courts[idx] && <div style={{ fontSize: 11, background: '#f5ece6', color: '#c26b3f', borderRadius: 4, padding: '2px 7px', fontWeight: 600, minWidth: 60, textAlign: 'center' }}>{courts[idx]}</div>}
+                      <div style={{ fontSize: 11, background: '#f5ece6', color: '#c26b3f', borderRadius: 4, padding: '2px 7px', fontWeight: 600, minWidth: 60, textAlign: 'center' }}>{courts[idx] || 'TBD'}</div>
                       <div style={{ flex: 1, fontSize: 14 }}>{match.p1.name} vs {match.p2.name}</div>
                       {match.winner && <div style={{ fontSize: 12, color: '#3a7a3a', fontWeight: 600 }}>✓ {match.score}</div>}
                     </div>
