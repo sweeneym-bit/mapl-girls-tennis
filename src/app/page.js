@@ -704,11 +704,7 @@ export default function App() {
     if (!window.confirm('Fill all flights with random test data including results?')) return;
     const firstNames = ['Alice','Beth','Cara','Dana','Emma','Faye','Gina','Hana','Iris','Jana','Kara','Lena','Mia','Nina','Opal','Pam','Quinn','Rosa','Sara','Tara','Uma','Vera','Wren','Xena','Yara','Zoe'];
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    const pickScore = () => {
-      const a = Math.floor(Math.random() * 4) + 5;
-      const b = Math.floor(Math.random() * a);
-      return `${a}-${b}`;
-    };
+    const pickScore = () => `${Math.floor(Math.random()*4)+5}-${Math.floor(Math.random()*4)}`;
     const used = [];
     const uniqueName = () => {
       let n;
@@ -718,39 +714,36 @@ export default function App() {
     };
 
     const newFlights = FLIGHT_NAMES.map((_, fi) => {
-      const seedList = Array(7).fill(null).map((_, si) => {
-        const school = SCHOOLS[si % SCHOOLS.length];
-        if (IS_DOUBLES[fi]) {
-          return { name1: uniqueName(), name2: uniqueName(), school };
-        }
-        return { name: uniqueName(), school };
-      });
-      const players = seedList.map((s, si) => {
-        if (IS_DOUBLES[fi]) return { name: `${s.name1} / ${s.name2}`, school: s.school, seed: si + 1 };
-        return { name: s.name, school: s.school, seed: si + 1 };
-      });
-      let matches = generateBracket(players);
+      const seedList = Array(7).fill(null).map((_, si) => ({
+        ...(IS_DOUBLES[fi] ? { name1: uniqueName(), name2: uniqueName() } : { name: uniqueName() }),
+        school: SCHOOLS[si % SCHOOLS.length]
+      }));
+      const players = seedList.map((s, si) => IS_DOUBLES[fi]
+        ? { name: `${s.name1} / ${s.name2}`, school: s.school, seed: si + 1 }
+        : { name: s.name, school: s.school, seed: si + 1 });
 
-      // Enter random R1 results
-      const enterResult = (idx, m) => {
-        if (!m[idx].p1 || !m[idx].p2) return m;
-        const coinFlip = Math.random() > 0.5;
-        const winner = coinFlip ? m[idx].p1 : m[idx].p2;
-        const loser = coinFlip ? m[idx].p2 : m[idx].p1;
-        const updated = m.map((x, i) => i === idx ? { ...x, winner, loser, score: pickScore() } : x);
-        return advanceBracket(updated, idx, indoor);
+      // Build matches step by step, each time calling advanceBracket once
+      let m = generateBracket(players);
+
+      const applyResult = (idx) => {
+        if (!m[idx] || !m[idx].p1 || !m[idx].p2) return;
+        const flip = Math.random() > 0.5;
+        const winner = flip ? m[idx].p1 : m[idx].p2;
+        const loser = flip ? m[idx].p2 : m[idx].p1;
+        m = m.map((x, i) => i === idx ? { ...x, winner, loser, score: pickScore() } : x);
+        m = advanceBracket(m, idx, indoor);
       };
 
-      matches = enterResult(0, matches);
-      matches = enterResult(1, matches);
-      matches = enterResult(2, matches);
-      matches = enterResult(3, matches);
-      matches = enterResult(4, matches);
-      matches = enterResult(5, matches);
-      matches = enterResult(6, matches);
-      matches = enterResult(7, matches);
+      // R1
+      applyResult(0); applyResult(1); applyResult(2);
+      // Semis
+      applyResult(3); applyResult(4);
+      // Final
+      applyResult(5);
+      // Consolation
+      applyResult(6); applyResult(7);
 
-      return { seeds: seedList, players, matches };
+      return { seeds: seedList, players, matches: m };
     });
 
     setFlights(newFlights);
