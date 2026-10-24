@@ -691,6 +691,74 @@ export default function App() {
     saveToSupabase(flights, generated, newIndoor);
   };
 
+  const handleReset = () => {
+    if (!window.confirm('Reset all tournament data? This cannot be undone.')) return;
+    const empty = [null, null, null, null, null];
+    setFlights(empty);
+    setGenerated(false);
+    setActiveTab('setup');
+    saveToSupabase(empty, false, indoor);
+  };
+
+  const handleAutoTest = () => {
+    if (!window.confirm('Fill all flights with random test data including results?')) return;
+    const firstNames = ['Alice','Beth','Cara','Dana','Emma','Faye','Gina','Hana','Iris','Jana','Kara','Lena','Mia','Nina','Opal','Pam','Quinn','Rosa','Sara','Tara','Uma','Vera','Wren','Xena','Yara','Zoe'];
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const pickScore = () => {
+      const a = Math.floor(Math.random() * 4) + 5;
+      const b = Math.floor(Math.random() * a);
+      return `${a}-${b}`;
+    };
+    const used = [];
+    const uniqueName = () => {
+      let n;
+      do { n = pick(firstNames); } while (used.includes(n));
+      used.push(n);
+      return n;
+    };
+
+    const newFlights = FLIGHT_NAMES.map((_, fi) => {
+      const seedList = Array(7).fill(null).map((_, si) => {
+        const school = SCHOOLS[si % SCHOOLS.length];
+        if (IS_DOUBLES[fi]) {
+          return { name1: uniqueName(), name2: uniqueName(), school };
+        }
+        return { name: uniqueName(), school };
+      });
+      const players = seedList.map((s, si) => {
+        if (IS_DOUBLES[fi]) return { name: `${s.name1} / ${s.name2}`, school: s.school, seed: si + 1 };
+        return { name: s.name, school: s.school, seed: si + 1 };
+      });
+      let matches = generateBracket(players);
+
+      // Enter random R1 results
+      const enterResult = (idx, m) => {
+        if (!m[idx].p1 || !m[idx].p2) return m;
+        const coinFlip = Math.random() > 0.5;
+        const winner = coinFlip ? m[idx].p1 : m[idx].p2;
+        const loser = coinFlip ? m[idx].p2 : m[idx].p1;
+        const updated = m.map((x, i) => i === idx ? { ...x, winner, loser, score: pickScore() } : x);
+        return advanceBracket(updated, idx, indoor);
+      };
+
+      matches = enterResult(0, matches);
+      matches = enterResult(1, matches);
+      matches = enterResult(2, matches);
+      matches = enterResult(3, matches);
+      matches = enterResult(4, matches);
+      matches = enterResult(5, matches);
+      matches = enterResult(6, matches);
+      matches = enterResult(7, matches);
+
+      return { seeds: seedList, players, matches };
+    });
+
+    setFlights(newFlights);
+    setGenerated(true);
+    setActiveTab('flight0');
+    saveToSupabase(newFlights, true, indoor);
+  };
+
   const handleLogin = () => {
     if (pwInput === ADMIN_PASSWORD) {
       setIsAdmin(true);
@@ -724,9 +792,17 @@ export default function App() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {isAdmin && (
-            <button onClick={handleIndoorToggle} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-              {indoor ? '☀️ Move outside' : '🏠 Go indoor'}
-            </button>
+            <>
+              <button onClick={handleIndoorToggle} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                {indoor ? '☀️ Outside' : '🏠 Indoor'}
+              </button>
+              <button onClick={handleAutoTest} style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                🎲 Test
+              </button>
+              <button onClick={handleReset} style={{ padding: '6px 12px', background: 'rgba(220,50,50,0.4)', color: 'white', border: '1px solid rgba(255,100,100,0.4)', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                🗑 Reset
+              </button>
+            </>
           )}
           {isAdmin ? (
             <div style={{ fontSize: 12, background: 'rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: 5 }}>Admin</div>
