@@ -84,16 +84,32 @@ function advanceBracket(matches, changedIdx, indoor) {
   }
 
   // Consolation
-  // C1 (M6): L(M0) vs L(M1) — the two lower-seeded losers (seeds 4/5 and 3/6)
-  if (changedIdx === 0 && m[0].loser) {
-    m[6] = { ...m[6], p1: m[0].loser };
-  }
-  if (changedIdx === 1 && m[1].loser) {
-    m[6] = { ...m[6], p2: m[1].loser };
-  }
-  // C2 (M7): W(C1) vs L(M2) — L(M2) is seed 2/7 loser, gets the consolation bye
-  if (changedIdx === 2 && m[2].loser) {
-    m[7] = { ...m[7], p2: m[2].loser };
+  // After each R1 result, recompute who gets the bye (highest-seeded loser = lowest seed number)
+  // C1 (M6): the two lower-seeded losers play each other
+  // C2 (M7): winner of C1 vs the bye (highest-seeded loser)
+  if (changedIdx === 0 || changedIdx === 1 || changedIdx === 2) {
+    const losers = [m[0].loser, m[1].loser, m[2].loser].filter(Boolean);
+    if (losers.length > 0) {
+      // Sort by seed ascending — lowest seed number = best seed = gets the bye
+      losers.sort((a, b) => a.seed - b.seed);
+      if (losers.length === 3) {
+        // All 3 R1 results in: bye goes to best seed, other two play C1
+        const byePlayer = losers[0];
+        const c1players = losers.slice(1); // the two worse seeds
+        m[6] = { ...m[6], p1: c1players[0], p2: c1players[1] };
+        m[7] = { ...m[7], p2: byePlayer };
+      } else if (losers.length === 2) {
+        // 2 results in: tentatively assign C1, bye TBD
+        const byePlayer = losers[0];
+        const c1player = losers[1];
+        m[6] = { ...m[6], p1: c1player, p2: null };
+        m[7] = { ...m[7], p2: byePlayer };
+      } else {
+        // 1 result in: just track, nothing to assign yet
+        m[6] = { ...m[6], p1: losers[0], p2: null };
+        m[7] = { ...m[7], p2: null };
+      }
+    }
   }
   if (changedIdx === 6 && m[6].winner) {
     m[7] = { ...m[7], p1: m[6].winner };
@@ -122,8 +138,8 @@ function pointsForFlight(matches) {
     if (matches[i]?.winner) add(matches[i].winner, 1);
   }
 
-  // Consolation bye = 0.5 pt: L(M2) is highest-seeded loser, sits out C1, goes straight to C2
-  if (matches[2]?.loser) add(matches[2].loser, 0.5);
+  // Consolation bye = 0.5 pt: highest-seeded loser sits out C1, goes straight to C2 as p2
+  if (matches[7]?.p2) add(matches[7].p2, 0.5);
 
   // Consolation wins = 0.5 pt each
   for (let i = 6; i <= 7; i++) {
