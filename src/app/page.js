@@ -174,6 +174,11 @@ function ScoreModal({ match, matchLabel, onSave, onClose, indoor }) {
   const p2 = match.p2;
   if (!p1 || !p2) return null;
 
+  // Soft score validation — warn but never block
+  const scoreWarning = score && !/^\d+[-–]\d+([,\s]+\d+[-–]\d+)*$/.test(score.trim())
+    ? 'Unusual format — double-check before saving.'
+    : null;
+
   const handleSave = () => {
     if (!winner || !score) return;
     const winnerObj = winner === p1.name ? p1 : p2;
@@ -202,8 +207,13 @@ function ScoreModal({ match, matchLabel, onSave, onClose, indoor }) {
             value={score}
             onChange={e => setScore(e.target.value)}
             placeholder={isProset ? '8–3' : '6–3, 4–6, 10–7'}
-            style={{ width: '100%', padding: '8px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '8px 10px', border: `1px solid ${scoreWarning ? '#e6a817' : '#ddd'}`, borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
           />
+          {scoreWarning && (
+            <div style={{ fontSize: 12, color: '#b07d00', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4, padding: '5px 8px', marginTop: 6 }}>
+              ⚠️ {scoreWarning}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: 6, cursor: 'pointer', background: 'white' }}>Cancel</button>
@@ -742,16 +752,21 @@ export default function App() {
   const isSavingRef = useRef(false);
   const saveQueueRef = useRef(Promise.resolve());
   const pendingSaveRef = useRef(null);
+  const [saveError, setSaveError] = useState(false);
 
-  // Load from Supabase
-  useEffect(() => {
-    supabase.from('tournament_state').select('state').eq('id', 1).single().then(({ data }) => {
-      if (data?.state) {
+  const fetchFromSupabase = useCallback(() => {
+    supabase.from('tournament_state').select('state').eq('id', 1).single().then(({ data, error }) => {
+      if (!error && data?.state) {
         setFlights(data.state.flights || [null, null, null, null, null]);
         setGenerated(data.state.generated || false);
         setIndoor(data.state.indoor || false);
       }
     });
+  }, []);
+
+  // Load from Supabase on mount + re-fetch when tab becomes visible again
+  useEffect(() => {
+    fetchFromSupabase();
 
     const channel = supabase.channel('tournament').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tournament_state' }, ({ new: row }) => {
       if (!isSavingRef.current && row.state) {
@@ -761,8 +776,21 @@ export default function App() {
       }
     }).subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, []);
+    // Re-fetch when tab regains focus (handles mobile browser suspension)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchFromSupabase();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Heartbeat: re-fetch every 2 minutes as fallback if subscription silently drops
+    const heartbeat = setInterval(fetchFromSupabase, 2 * 60 * 1000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(heartbeat);
+    };
+  }, [fetchFromSupabase]);
 
   const saveToSupabase = useCallback((newFlights, newGenerated, newIndoor) => {
     const stateToSave = { flights: newFlights, generated: newGenerated, indoor: newIndoor };
@@ -772,7 +800,17 @@ export default function App() {
       const s = pendingSaveRef.current;
       pendingSaveRef.current = null;
       isSavingRef.current = true;
-      await supabase.from('tournament_state').update({ state: s }).eq('id', 1);
+      const { error } = await supabase.from('tournament_state').update({ state: s }).eq('id', 1);
+      if (error) {
+        setSaveError(true);
+        // Retry once after 5 seconds
+        setTimeout(async () => {
+          const { error: retryError } = await supabase.from('tournament_state').update({ state: s }).eq('id', 1);
+          if (!retryError) setSaveError(false);
+        }, 5000);
+      } else {
+        setSaveError(false);
+      }
       setTimeout(() => { isSavingRef.current = false; }, 2000);
     });
   }, []);
@@ -945,6 +983,14 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* Save error banner */}
+      {saveError && (
+        <div style={{ background: '#c0392b', color: 'white', padding: '8px 20px', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span>⚠️ Save failed — check your connection. Results may not be syncing to other devices.</span>
+          <button onClick={() => setSaveError(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: 16 }}>✕</button>
+        </div>
+      )}
 
       {/* Accent bar */}
       <div style={{ height: 3, background: accentColor }} />
