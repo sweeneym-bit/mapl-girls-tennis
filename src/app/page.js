@@ -480,31 +480,108 @@ function OOPTab({ flights, generated, indoor }) {
   });
 
   if (indoor) {
-    // Indoor: single queue, 4 courts, all prosets
-    // Group by round
-    const rounds = [1, 2, 3];
+    // Indoor court scheduling: 4 courts, 45 min per match, start 9:00 AM
+    // Round gates: R2 (semis + C1) can't start until all R1 done; R3 (final + C2) until all R2 done
+    const NUM_COURTS = 4;
+    const MATCH_MINS = 45;
+    const START_MIN = 9 * 60; // 9:00 AM in minutes from midnight
+
+    const FLIGHT_SHORT = ['S1', 'S2', 'S3', 'D1', 'D2'];
+
+    // Separate into round buckets: R1 (mi 0-2), R2 (mi 3,4,6), R3 (mi 5,7)
+    const r1 = allMatches.filter(x => x.mi <= 2);
+    const r2 = allMatches.filter(x => x.mi === 3 || x.mi === 4 || x.mi === 6);
+    const r3 = allMatches.filter(x => x.mi === 5 || x.mi === 7);
+
+    // Schedule a batch of matches onto 4 courts starting no earlier than `gateMin`
+    // courtFree[i] = minute when court i+1 is next available
+    const scheduleRound = (matches, courtFree, gateMin) => {
+      // All courts must respect the gate (previous round must be done)
+      const adjustedFree = courtFree.map(t => Math.max(t, gateMin));
+      return matches.map(m => {
+        // Pick earliest free court
+        let bestCourt = 0;
+        for (let i = 1; i < NUM_COURTS; i++) {
+          if (adjustedFree[i] < adjustedFree[bestCourt]) bestCourt = i;
+        }
+        const startMin = adjustedFree[bestCourt];
+        adjustedFree[bestCourt] = startMin + MATCH_MINS;
+        // Write back to courtFree
+        courtFree[bestCourt] = adjustedFree[bestCourt];
+        return { ...m, court: bestCourt + 1, startMin };
+      });
+    };
+
+    const formatTime = (min) => {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+    };
+
+    const courtFree = Array(NUM_COURTS).fill(START_MIN);
+
+    const scheduled1 = scheduleRound(r1, courtFree, START_MIN);
+    const r1EndMin = Math.max(...courtFree);
+
+    const scheduled2 = scheduleRound(r2, courtFree, r1EndMin);
+    const r2EndMin = Math.max(...courtFree);
+
+    const scheduled3 = scheduleRound(r3, courtFree, r2EndMin);
+
+    const allScheduled = [...scheduled1, ...scheduled2, ...scheduled3]
+      .sort((a, b) => a.startMin - b.startMin || a.court - b.court);
+
+    // Group by time slot for display
+    const timeSlots = [];
+    const seenTimes = new Set();
+    allScheduled.forEach(m => {
+      const key = m.startMin;
+      if (!seenTimes.has(key)) { seenTimes.add(key); timeSlots.push(key); }
+    });
+    timeSlots.sort((a, b) => a - b);
+
+    const matchLabel = (mi) => {
+      if (mi <= 2) return 'R1';
+      if (mi === 3 || mi === 4) return 'Semi';
+      if (mi === 5) return 'Final';
+      if (mi === 6) return 'Cons R1';
+      if (mi === 7) return 'Cons Final';
+      return '';
+    };
+
     return (
       <div>
         <div style={{ background: '#1a3a5c', color: 'white', borderRadius: 8, padding: '8px 14px', marginBottom: 16, fontSize: 13 }}>
-          🏠 Indoor mode — all prosets, no-ad, 4 courts shared rotation
+          🏠 Indoor — 4 courts · ~45 min/match · times are estimates
         </div>
-        {rounds.map(r => {
-          const rMatches = allMatches.filter(x => x.round === r);
-          if (!rMatches.length) return null;
+        {timeSlots.map(slotMin => {
+          const slotMatches = allScheduled.filter(x => x.startMin === slotMin).sort((a, b) => a.court - b.court);
+          const isNewRound = slotMatches.some(x => x.mi === 3 || x.mi === 4 || x.mi === 6)
+            ? 'Semis & Consolation R1'
+            : slotMatches.some(x => x.mi === 5 || x.mi === 7)
+            ? 'Finals & Consolation Final'
+            : null;
           return (
-            <div key={r} style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>Round {r}</div>
-                <div style={{ fontSize: 12, color: '#888' }}>{ROUND_TIMES[r-1]}</div>
+            <div key={slotMin} style={{ marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0 4px', borderTop: '1px solid #e8e0d8' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#1a3a5c', minWidth: 80 }}>{formatTime(slotMin)}</div>
+                {isNewRound && <div style={{ fontSize: 11, background: '#1a3a5c', color: 'white', borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>{isNewRound}</div>}
               </div>
-              {rMatches.map(({ mNum, flightName, match }) => (
-                <div key={mNum} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'white', border: '1px solid #e8e0d8', borderRadius: 8, padding: '10px 14px', marginBottom: 6 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#888', width: 30 }}>{mNum}</div>
-                  <div style={{ fontSize: 11, background: '#e8f4e8', color: '#3a7a3a', borderRadius: 4, padding: '2px 7px', fontWeight: 600 }}>{flightName}</div>
-                  <div style={{ flex: 1, fontSize: 14 }}>{match.p1.name} vs {match.p2.name}</div>
-                  {match.winner && <div style={{ fontSize: 12, color: '#3a7a3a', fontWeight: 600 }}>✓ {match.score}</div>}
-                </div>
-              ))}
+              {slotMatches.map(({ mNum, mi, match, court, fi }) => {
+                const isConsolation = mi >= 6;
+                const label = matchLabel(mi);
+                return (
+                  <div key={mNum} style={{ display: 'flex', alignItems: 'center', gap: 10, background: isConsolation ? '#fafafa' : 'white', border: `1px solid ${isConsolation ? '#ddd' : '#e8e0d8'}`, borderRadius: 8, padding: '9px 13px', marginBottom: 5 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1a3a5c', minWidth: 54, textAlign: 'center', background: '#e8f0f8', borderRadius: 4, padding: '2px 6px' }}>Ct {court}</div>
+                    <div style={{ fontSize: 11, background: isConsolation ? '#f0f0f0' : '#e8f4e8', color: isConsolation ? '#666' : '#3a7a3a', borderRadius: 4, padding: '2px 7px', fontWeight: 600, minWidth: 28, textAlign: 'center' }}>{FLIGHT_SHORT[fi]}</div>
+                    <div style={{ fontSize: 11, color: '#999', minWidth: 58 }}>{label}</div>
+                    <div style={{ flex: 1, fontSize: 14 }}>{match.p1.name} vs {match.p2.name}</div>
+                    {match.winner && <div style={{ fontSize: 12, color: '#3a7a3a', fontWeight: 600 }}>✓ {match.score}</div>}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
