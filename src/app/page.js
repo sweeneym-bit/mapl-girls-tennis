@@ -743,7 +743,7 @@ export default function App() {
   const [flights, setFlights] = useState([null, null, null, null, null]);
   const [generated, setGenerated] = useState(false);
   const [indoor, setIndoor] = useState(false);
-  const [activeTab, setActiveTab] = useState('setup');
+  const [activeTab, setActiveTab] = useState('oop');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [pwInput, setPwInput] = useState('');
@@ -851,7 +851,7 @@ export default function App() {
     const empty = [null, null, null, null, null];
     setFlights(empty);
     setGenerated(false);
-    setActiveTab('setup');
+    setActiveTab('setup'); // admin is logged in so Setup tab is visible
     saveToSupabase(empty, false, indoor);
   };
 
@@ -940,11 +940,11 @@ export default function App() {
   };
 
   const TABS = [
-    { id: 'setup', label: 'Setup' },
     { id: 'warmup', label: '🎾 Warmup Courts' },
     { id: 'oop', label: 'Order of Play' },
     ...FLIGHT_NAMES.map((f, i) => ({ id: `flight${i}`, label: f })),
     { id: 'scores', label: 'Team Scores' },
+    ...(isAdmin ? [{ id: 'setup', label: '⚙️ Setup' }] : []),
   ];
 
   const accentColor = indoor ? '#1a3a5c' : '#c26b3f';
