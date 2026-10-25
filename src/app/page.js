@@ -119,7 +119,7 @@ function advanceBracket(matches, changedIdx, indoor) {
 }
 
 function pointsForFlight(matches) {
-  // Scoring: seed1 bye = 1pt, every win = 1pt, consolation win = 0.5pt
+  // Scoring: main draw wins (incl. seed 1 bye) = 2 pts, consolation wins (incl. consolation bye) = 0.5 pt
   const pts = {};
   if (!matches) return pts;
 
@@ -130,15 +130,15 @@ function pointsForFlight(matches) {
     pts[key].pts += val;
   };
 
-  // Seed 1 bye = 1 pt
-  if (matches[3]?.p1?.bye) add(matches[3].p1, 1);
+  // Seed 1 bye = 2 pts (main draw)
+  if (matches[3]?.p1?.bye) add(matches[3].p1, 2);
 
-  // Winners bracket wins = 1 pt each
+  // Main draw wins = 2 pts each (R1: 0-2, SF: 3-4, Final: 5)
   for (let i = 0; i <= 5; i++) {
-    if (matches[i]?.winner) add(matches[i].winner, 1);
+    if (matches[i]?.winner) add(matches[i].winner, 2);
   }
 
-  // Consolation bye = 0.5 pt: highest-seeded loser sits out C1, goes straight to C2 as p2
+  // Consolation bye = 0.5 pt
   if (matches[7]?.p2) add(matches[7].p2, 0.5);
 
   // Consolation wins = 0.5 pt each
@@ -288,7 +288,7 @@ function FlightView({ flightIdx, flight, isAdmin, onUpdate, indoor }) {
           <div style={{ fontSize: 11, color: '#888' }}>{player.school}</div>
         </div>
         {showScore && score && <div style={{ fontSize: 13, fontWeight: 600, color: '#3a7a3a' }}>{score}</div>}
-        {player.bye && !isWinner && <div style={{ fontSize: 11, color: '#888', fontStyle: 'italic' }}>BYE (+1 pt)</div>}
+        {player.bye && !isWinner && <div style={{ fontSize: 11, color: '#888', fontStyle: 'italic' }}>BYE (+2 pts)</div>}
       </div>
     );
   };
@@ -337,11 +337,11 @@ function FlightView({ flightIdx, flight, isAdmin, onUpdate, indoor }) {
         <div style={{ fontWeight: 700, fontSize: 15, color: '#c26b3f', marginBottom: 12 }}>Consolation bracket</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: 1, marginBottom: 8 }}>ROUND 1 (0.5 pt)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: 1, marginBottom: 8 }}>ROUND 1 (0.5 pts)</div>
             {matchCard(6, 'C1', 2)}
           </div>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: 1, marginBottom: 8 }}>ROUND 2 (0.5 pt)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: 1, marginBottom: 8 }}>ROUND 2 (0.5 pts)</div>
             {matchCard(7, 'C2', 3)}
           </div>
         </div>
