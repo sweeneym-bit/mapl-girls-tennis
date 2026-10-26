@@ -947,6 +947,7 @@ export default function App() {
     { id: 'oop', label: 'Order of Play' },
     ...FLIGHT_NAMES.map((f, i) => ({ id: `flight${i}`, label: f })),
     { id: 'scores', label: 'Team Scores' },
+    { id: 'info', label: 'Tournament Info' },
     ...(isAdmin ? [{ id: 'setup', label: '⚙️ Setup' }] : []),
   ];
 
@@ -1021,6 +1022,20 @@ export default function App() {
           <FlightView key={fi} flightIdx={fi} flight={flights[fi]} isAdmin={isAdmin} onUpdate={(f) => handleFlightUpdate(fi, f)} indoor={indoor} />
         ))}
         {activeTab === 'scores' && <TeamScoresTab flights={flights} />}
+        {activeTab === 'info' && (
+          <div style={{ padding: '24px 20px', maxWidth: 600 }}>
+            <h2 style={{ marginTop: 0, marginBottom: 12 }}>Tournament Information</h2>
+            <p style={{ marginBottom: 20, color: '#555' }}>General information, schedules, and resources for the MAPL Girls Tennis Tournament.</p>
+            <a
+              href="https://docs.google.com/document/d/1XKE_OTZ5-sXE77BU4b7sN6TGrpKMY57kzg68mEZix40/edit?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-block', background: '#1a3a5c', color: 'white', padding: '12px 24px', borderRadius: 6, textDecoration: 'none', fontWeight: 600, fontSize: 15 }}
+            >
+              📄 Open Tournament Info Doc
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Login modal */}
