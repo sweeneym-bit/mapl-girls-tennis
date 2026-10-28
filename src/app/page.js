@@ -659,14 +659,18 @@ function OOPTab({ flights, generated, indoor }) {
               return (
                 <div key={fi} style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#c26b3f', marginBottom: 6, letterSpacing: 0.5 }}>{fname}</div>
-                  {fMatches.map(({ mNum, match }, idx) => (
+                  {fMatches.map(({ mNum, mi, match }, idx) => {
+                    const FLIGHT_SHORT_OUT = ['S1', 'S2', 'S3', 'D1', 'D2'];
+                    const flightLabel = `${FLIGHT_SHORT_OUT[fi]}-M${mi + 1}`;
+                    return (
                     <div key={mNum} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'white', border: '1px solid #e8e0d8', borderRadius: 8, padding: '9px 13px', marginBottom: 5 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#888', width: 30 }}>{mNum}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#888', minWidth: 44 }}>{flightLabel}</div>
                       <div style={{ fontSize: 11, background: '#f5ece6', color: '#c26b3f', borderRadius: 4, padding: '2px 7px', fontWeight: 600, minWidth: 60, textAlign: 'center' }}>{courts[idx] || 'TBD'}</div>
                       <div style={{ flex: 1, fontSize: 14 }}>{match.p1.name} vs {match.p2.name}</div>
                       {match.winner && <div style={{ fontSize: 12, color: '#3a7a3a', fontWeight: 600 }}>✓ {match.score}</div>}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
